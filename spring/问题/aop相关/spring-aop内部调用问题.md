@@ -380,7 +380,19 @@ public class DefaultAopProxyFactory implements AopProxyFactory, Serializable {
         });
 ```
 
-主要是VisibilityPredicate  进行处理了 private
+主要是VisibilityPredicate  进行处理了 **private**
+
+上面看到的都是怎么处理了，现在看看为什么这么做，这要从cglib的代理方式说起。
+
+我们可以看一下cglib的执行计划
+
+```java
+//TODO 解析cglib相关字节码组件
+```
+
+在spring上下文中可以看出将Aopfactory替换了TestService，使用了代理实现类
+
+JDK动态代理是实现了被代理对象的接口，Cglib是继承了被代理对象。
 
 ---
 

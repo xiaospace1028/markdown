@@ -222,7 +222,7 @@ public final class AopContext {
 
 查看setCurrentProxy调用地方：
 
-![image-20200109134024378](C:\Users\xiaospace\AppData\Roaming\Typora\typora-user-images\image-20200109134024378.png)
+![image-20200109134024378](../../../image/image-20200109134024378.png)
 
 看到 DynamicAdvisedInterceptor 、StaticUnadvisedExposedInterceptor 是不是很熟悉？上面出现过。
 

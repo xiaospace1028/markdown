@@ -272,27 +272,28 @@ Callback targetInterceptor;
 * EqualsInterceptor：这个就是证实上面的想法
 * HashCodeInterceptor：hashCode方法的调度程序。确保方法调用始终由此类处理。确定是不是他。
 
-上述方法中一直提到一个对象 ProxyFactory(this.advised) 
+### 分析 核心 CglibAopProxy
 
+上述方法中一直提到一个对象 ProxyFactory(this.advised)  AdvisedSupport
 
+查看CglibAopProxy 构造方法
 
-## 分析 核心 CglibAopProxy
+```java
+	public CglibAopProxy(AdvisedSupport config) throws AopConfigException {
+		Assert.notNull(config, "AdvisedSupport must not be null");
+		if (config.getAdvisors().length == 0 && config.getTargetSource() == AdvisedSupport.EMPTY_TARGET_SOURCE) {
+			throw new AopConfigException("No advisors and no TargetSource specified");
+		}
+		this.advised = config;
+		this.advisedDispatcher = new AdvisedDispatcher(this.advised);
+	}
+```
 
-
-
-
-
-
-
-
-
-
+然后查看引用地点--->DefaultAopProxyFactory
 
 ---
 
-## 判断用什么方法的
-
-public class DefaultAopProxyFactory implements AopProxyFactory, Serializable {
+### DefaultAopProxyFactory
 
 ```java
 public class DefaultAopProxyFactory implements AopProxyFactory, Serializable {
@@ -325,13 +326,63 @@ public class DefaultAopProxyFactory implements AopProxyFactory, Serializable {
 }
 ```
 
+由上面方法可以很直观的看出怎么选择的方式
+
+回到问题二我们为什么不能看到私有方法 也就是这个 **MethodInterceptor** 关键的类：打开cglib
+
+```java
+  private static void getMethods(Class superclass, Class[] interfaces, List methods, List interfaceMethods, Set forcePublic)
+    {
+        ReflectUtils.addAllMethods(superclass, methods);
+        List target = (interfaceMethods != null) ? interfaceMethods : methods;
+        if (interfaces != null) {
+            for (int i = 0; i < interfaces.length; i++) {
+                if (interfaces[i] != Factory.class) {
+                    ReflectUtils.addAllMethods(interfaces[i], target);
+                }
+            }
+        }
+        if (interfaceMethods != null) {
+            if (forcePublic != null) {
+                forcePublic.addAll(MethodWrapper.createSet(interfaceMethods));
+            }
+            methods.addAll(interfaceMethods);
+        }
+      //上面取出全部的
+      //去除static的
+        CollectionUtils.filter(methods, new RejectModifierPredicate(Constants.ACC_STATIC));
+      //去除不可见的，这里面就是去除private方法的主要
+        CollectionUtils.filter(methods, new VisibilityPredicate(superclass, true));
+      //去重？ 其实是把同名同参数方法丢到父类里面去
+        CollectionUtils.filter(methods, new DuplicatesPredicate(methods));
+      //去除不能被修改的
+        CollectionUtils.filter(methods, new RejectModifierPredicate(Constants.ACC_FINAL));
+    }
+```
 
 
 
+```java
+   List methods = CollectionUtils.transform(actualMethods, new Transformer() {
+            public Object transform(Object value) {
+                Method method = (Method)value;
+                int modifiers = Constants.ACC_FINAL
+                    | (method.getModifiers()
+                       & ~Constants.ACC_ABSTRACT
+                       & ~Constants.ACC_NATIVE
+                       & ~Constants.ACC_SYNCHRONIZED);
+                if (forcePublic.contains(MethodWrapper.create(method))) {
+                    modifiers = (modifiers & ~Constants.ACC_PROTECTED) | Constants.ACC_PUBLIC;
+                }
+			// 对获取到的方法是有标记值	
+                return ReflectUtils.getMethodInfo(method, modifiers);
+            }
+        });
+```
+
+主要是VisibilityPredicate  进行处理了 private
 
 ---
-
-
 
 ## 性能区别
 

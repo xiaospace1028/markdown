@@ -280,8 +280,13 @@ com.xiaospace.webtest.asm.service.AsmService.send(Ljava/lang/String;)Ljava/lang/
 com.xiaospace.webtest.asm.controller.AsmController.send(Ljava/lang/Object;)V--time--【2】毫秒
 ```
 
-在很多地方都可以做埋点等等操作，写一个startMethod以及endMethod ，不太推荐耗时操作，agent导入jar包的时候最好不要冲突原来的项目类似于日志，json化工具，http请求客户端，要确保原来项目健壮性，最好有一个检测包的机制，只打印自己写的代码的时间长度，以及扫描原项目导入的包和agent项目的包冲突情况，类似于阿里云asm插件包jar里面的功能；**一定需要保证被监控的项目的稳定性。**
+在很多地方都可以做埋点等等操作，
 
+* 耗时操作：写一个startMethod以及endMethod ，不太推荐耗时操作
 
+* jar包冲突：agent导入jar包的时候最好不要冲突原来的项目类似于日志，json化工具，http请求客户端，要确保原来项目健壮性，最好有一个检测包的机制，只打印自己写的代码的时间长度，以及扫描原项目导入的包和agent项目的包冲突情况，类似于阿里云asm插件包jar里面的功能；**一定需要保证被监控的项目的稳定性。**
 
-上面只是一个demo和一些想法需要系统的出来一个项目需要好多东西，阿里云的arms采用将日志写在本地，然后推到oss上面去分析日志，占用了本地非常少的资源，也是一个平台化的选择；
+* TraceId传输：TraceId这个第一个是可以在进入项目tomcat的servlet可以判断是否存在header里面是不是有traceId，有的话存入用threadlocal，以及修改http请求某几个jar包的header里面处理，这样子分布式服务里面就会存在traceId
+* 日志处理：阿里云的arms是将一些日志先存在本地，然后推送到oss上面，占用了一点点io资源，至于内存和cpu消耗是少的，走的也应该是内网io所以整体上没有，日志也应该有其他服务处理，变成可查询的数据；
+
+上面只是一个demo和一些想法需要系统的出来一个项目需要好多东西，

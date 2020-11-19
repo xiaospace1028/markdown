@@ -405,12 +405,3 @@ JDK动态代理是实现了被代理对象的接口，Cglib是继承了被代理
 JDK Dynamic Proxy :只能代理实现了interface的类，且必须要有interface
 
 CGLIB：原理是对指定的目标类生成一个子类，并覆盖其中方法实现增强，采用的是继承，所以不能对final修饰的类进行代理。
-
-
-
-
-
-
-
-
-

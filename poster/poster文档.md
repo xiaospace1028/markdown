@@ -1,10 +1,13 @@
 ## 动态生成活动图片
 
-##### 输入模版json
-  [json-model.md](json-model.md) 
-##### 产生图片
+[项目地址](https://github.com/xiaospace1028/poster)
 
-[模版demo](../image/poster_demo.png)
+---
+##### 输入模版json
+[json-model.md](json-model.md) 
+
+##### 产生图片
+![模版demo](../image/poster_demo.png)
 
 ---
 

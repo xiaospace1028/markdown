@@ -204,7 +204,7 @@ private int expungeStaleEntry(int staleSlot) {
 private static final int HASH_INCREMENT = 0x61c88647;
 ```
 
-是为了离散队列使得分布更加均匀具体看参考1，里面说明了关于数字来源以及分析这边我们也可以自己来验证一下
+是为了离散队列使得分布更加均匀具体看[参考1](https://zhuanlan.zhihu.com/p/40515974)
 
 解决hash冲突的方式
 

@@ -215,7 +215,43 @@ private static final int HASH_INCREMENT = 0x61c88647;
 3. 再哈希法
    *  找到下一个hash方法再计算，直到不冲突
 4. 建立公共溢出区
-   * 就是把冲突的都放在另一个地方，不在表里面。
+   * 就是把冲突的都放在另一个地方，不在表里面
+
+现在看get方法
+
+```java
+        private Entry getEntry(ThreadLocal<?> key) {
+            int i = key.threadLocalHashCode & (table.length - 1);
+            Entry e = table[i];
+          //不为空且key一致就返回
+            if (e != null && e.get() == key)
+                return e;
+            else
+                return getEntryAfterMiss(key, i, e);
+        }
+```
+
+getEntryAfterMiss方法
+
+```java
+        private Entry getEntryAfterMiss(ThreadLocal<?> key, int i, Entry e) {
+            Entry[] tab = table;
+            int len = tab.length;
+						//比较拿到下一个位置++
+            while (e != null) {
+                ThreadLocal<?> k = e.get();
+                if (k == key)
+                    return e;
+                if (k == null)
+                  //剔除空的key
+                    expungeStaleEntry(i);
+                else
+                    i = nextIndex(i, len);
+                e = tab[i];
+            }
+            return null;
+        }
+```
 
 ---
 

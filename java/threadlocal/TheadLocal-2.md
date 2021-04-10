@@ -1,262 +1,91 @@
-## TheadLocal（一）
+## InheritableThreadLocal
 
-问题：
-
-* 当一个线程不想用责任链模式传参数，但是下面方法要用上面的参数的时候类似于sessionId、userId、traceId等等，都可以用threadLocal实现
-* 当子线程需要父类线程的参数时候怎么传递参数-->InheritableThreadLocal
-* InheritableThreadLocal是否适用于多线程-->TransmittableThreadLocal
-
----
-
-### ThreadLocal、Thread、ThreadLocalMap
-
--->一开始读的时候很懵逼 **Thread** 包含 **ThreadLocalMap** ，**ThreadLocal** 里面包括 **ThreadLocalMap** 类 ，**ThreadLocalMap** 里面的key 又是 **ThreadLocal**  父与子的关系，真的让人头大，下面我梳理一下里面的关系吧。
-
-从常用的使用方式入手
+ [上一章](TheadLocal-1.md) 讲了ThreadLocal源码，这一章讲一下关于**InheritableThreadLocal**就是子线程中需要使用父线程的相关字段用到的类，我们先看一下下面这段代码
 
 ```java
-ThreadLocal<String> local = new ThreadLocal();
-local.set("");
-String s = local.get();
+    public static void main(String[] args) throws InterruptedException {
+        InheritableThreadLocal local = new InheritableThreadLocal();
+        ExecutorService fixedThreadPool = Executors.newFixedThreadPool(1);
+        local.set("local--初始化");
+        Runnable task = () -> {
+            String name1 = Thread.currentThread().getName();
+            Object o = local.get();
+            System.out.println(name1 + ":local" + o);
+        };
+        fixedThreadPool.submit(task);//第一次
+        local.set("local--修改");
+        fixedThreadPool.submit(task);//第二次
+    }
 ```
 
-点到get，set方法中以后存在
+结果
 
-`ThreadLocalMap map = getMap(t);`
-
-获取map的方法，这个是为了拿到map类，这个map类是在 `createMap(t, value); ` 方法中创建而 **ThreadLocalMap** 是放在 **Thread** 中，所以对于一个**Thread**来说只存在于一个**ThreadLocalMap**<threadLocals>（这里抛开inheritableThreadLocals，后面说到这个），set方法里面存在`map.set(this, value);`，get方法里面`ThreadLocalMap.Entry e = map.getEntry(this);`
-
-那么进一步分析一下ThreadLocalMap
-
-基础知识
-
-```java
-int h = k.threadLocalHashCode & (len - 1); //位运算 快速取下标 类似于 5%2 =2
-private static final int INITIAL_CAPACITY = 16;
+```console
+pool-1-thread-1:locallocal--初始化
+pool-1-thread-1:locallocal--初始化
 ```
 
-和hashmap一致  初始化大小为16，
+也就是说在第一次确实能拿到父类线程中的，但是第二次当父类线程把值给变换的时候子线程缺没有相关联的变，那么这个原因是什么？有什么办法解决呢？
+
+原因：
+
+Thread#init 方法里面
 
 ```java
-static class Entry extends WeakReference<ThreadLocal<?>> {
-            /** The value associated with this ThreadLocal. */
-            Object value;
-
-            Entry(ThreadLocal<?> k, Object v) {
-                super(k);
-                value = v;
-            }
-}
-```
-
-ThreadLocalMap 里面存在的 Entry 继承 WeakReference 弱引用 方便gc回收，但是会造成内存泄漏（只要线程没有被复用不会存在这种情况，但是还是手动去除里面存放的value，而且当调用set方法的时候）
-
-```java
- private void set(ThreadLocal<?> key, Object value) {
-
-            // We don't use a fast path as with get() because it is at
-            // least as common to use set() to create new entries as
-            // it is to replace existing ones, in which case, a fast
-            // path would fail more often than not.
-
-            Entry[] tab = table;
-            int len = tab.length;
-            int i = key.threadLocalHashCode & (len-1);
-						//向后寻找一个为null的index存下
-            for (Entry e = tab[i];
-                 e != null;
-                 e = tab[i = nextIndex(i, len)]) {
-                ThreadLocal<?> k = e.get();
-              //找到key的时候将value进行替换
-                if (k == key) {
-                    e.value = value;
-                    return;
-                }
-              //如果原始的key 被gc不存在就进搜索
-                if (k == null) {
-                  //搜索数组里面是否存在相同key的ThreadLocal的Entry，但是被gc回收的
-                    replaceStaleEntry(key, value, i);
-                    return;
-                }
-            }
-            tab[i] = new Entry(key, value);
-            int sz = ++size;
-            if (!cleanSomeSlots(i, sz) && sz >= threshold)
-                rehash();
-}
-```
-
-replaceStaleEntry 解析
-
-```java
- private void replaceStaleEntry(ThreadLocal<?> key, Object value,
-                                       int staleSlot) {
-            Entry[] tab = table;
-            int len = tab.length;
-            Entry e;
-
-            // Back up to check for prior stale entry in current run.
-            // We clean out whole runs at a time to avoid continual
-            // incremental rehashing due to garbage collector freeing
-            // up refs in bunches (i.e., whenever the collector runs).
-						
-   					//向前搜索Entry key为空的 记下 下标 slotToExpunge ,并且一直推到最前面记下最前面的key为空的i，方便后面清除
-            int slotToExpunge = staleSlot;
-            for (int i = prevIndex(staleSlot, len);
-                 (e = tab[i]) != null;
-                 i = prevIndex(i, len))
-                if (e.get() == null)
-                    slotToExpunge = i;
-
-            // Find either the key or trailing null slot of run, whichever
-            // occurs first
-						//向后搜索Entry 为空的 记下 下标 slotToExpunge 
-            for (int i = nextIndex(staleSlot, len);
-                 (e = tab[i]) != null;
-                 i = nextIndex(i, len)) {
-                ThreadLocal<?> k = e.get();
-
-                // If we find key, then we need to swap it
-                // with the stale entry to maintain hash table order.
-                // The newly stale slot, or any other stale slot
-                // encountered above it, can then be sent to expungeStaleEntry
-                // to remove or rehash all of the other entries in run.
-							
-              //如果找到发生hash冲突的key老的hash 推到后面的位置，新的i存放旧值
-                if (k == key) {
-                    e.value = value;
-
-                    tab[i] = tab[staleSlot];
-                    tab[staleSlot] = e;
-
-                    // Start expunge at preceding stale entry if it exists
-                    if (slotToExpunge == staleSlot)
-                        slotToExpunge = i;
-                    cleanSomeSlots(expungeStaleEntry(slotToExpunge), len);
-                    return;
-                }
-
-                // If we didn't find stale entry on backward scan, the
-                // first stale entry seen while scanning for key is the
-                // first still present in the run.
-              //如果没有找到相同值，就找新的为空的下标记录
-                if (k == null && slotToExpunge == staleSlot)
-                    slotToExpunge = i;
-            }
-
-            // If key not found, put new entry in stale slot
-            tab[staleSlot].value = null;
-            tab[staleSlot] = new Entry(key, value);
-
-            // If there are any other stale entries in run, expunge them
-   				//清除记录下标到结尾
-            if (slotToExpunge != staleSlot)
-                cleanSomeSlots(expungeStaleEntry(slotToExpunge), len);
+    private void init(ThreadGroup g, Runnable target, String name,
+                      long stackSize, AccessControlContext acc,
+                      boolean inheritThreadLocals) {
+        if (name == null) {
+            throw new NullPointerException("name cannot be null");
         }
+        this.name = name;
+      //主线程创建子线程，当前还在主线程
+        Thread parent = currentThread();
+       .....省略代码....校验权限
+       
+        if (inheritThreadLocals && parent.inheritableThreadLocals != null)
+            this.inheritableThreadLocals =
+          //拷贝到子线程
+                ThreadLocal.createInheritedMap(parent.inheritableThreadLocals);
+        /* Stash the specified stack size in case the VM cares */
+        this.stackSize = stackSize;
+
+        /* Set thread ID */
+        tid = nextThreadID();
+    }
 ```
 
-
-
-replaceStaleEntry 这个方法也就是帮助找到存在原来的entry 并且清理null key的这么一个东西，其实`expungeStaleEntry(slotToExpunge)`空出当前位置方法 ( 清理为null的key和下推index找到null存放)存在好多地方（是真的很怕内存溢出，几乎所有方法里面都有这个）
+所以他只是在创建线程的时候拷贝父线程的`inheritableThreadLocals`并没有一个跟随的检测的机制，可以适合TraceId，但是如果有需求想要创建有主线程变更后会更新的功能，需要使用阿里巴巴开源的jar包[TransmittableThreadLocal](https://github.com/alibaba/transmittable-thread-local) 里面有三种使用方式，agent，修饰线程池，修饰Thread*的方式使用方法以及对比效果
 
 ```java
-private int expungeStaleEntry(int staleSlot) {
-            Entry[] tab = table;
-            int len = tab.length;
-						//废话不多说直接置为空
-            // expunge entry at staleSlot
-            tab[staleSlot].value = null;
-            tab[staleSlot] = null;
-            size--;//设置map里面真实的size
-						//搜索为空的数据其实也是清理的的一部分
-            // Rehash until we encounter null
-            Entry e;
-            int i;
-            for (i = nextIndex(staleSlot, len);
-                 (e = tab[i]) != null;
-                 i = nextIndex(i, len)) {
-                ThreadLocal<?> k = e.get();
-                if (k == null) {
-                    e.value = null;
-                    tab[i] = null;
-                    size--;
-                } else {
-                    int h = k.threadLocalHashCode & (len - 1);
-                    if (h != i) {
-                        tab[i] = null;
-
-                        // Unlike Knuth 6.4 Algorithm R, we must scan until
-                        // null because multiple entries could have been stale.
-                      	// 发生hash冲突的时候怎么办？直接++的方式一直找到一个为空的位置放下，所以其实不建议使用非常多的ThreadLocal在一个Thread里面，
-                        while (tab[h] != null)
-                            h = nextIndex(h, len);
-                        tab[h] = e;
-                    }
-                }
-            }
-            return i;
-        }
+    public static void main(String[] args) throws InterruptedException {
+        InheritableThreadLocal local = new InheritableThreadLocal();
+        TransmittableThreadLocal transLocal = new TransmittableThreadLocal();
+        ExecutorService fixedThreadPool = Executors.newFixedThreadPool(1);
+        local.set("local--初始化");
+        transLocal.set("transLocal--初始化");
+        Runnable task = () -> {
+            String name1 = Thread.currentThread().getName();
+            Object o = local.get();
+            Object transO = transLocal.get();
+            System.out.println(name1 + ":local" + o);
+            System.out.println(name1 + ":transLocal" + transO);
+        };
+        fixedThreadPool.submit(TtlRunnable.get(task));
+        local.set("local--修改");
+        transLocal.set("transLocal--修改");
+        fixedThreadPool.submit(TtlRunnable.get(task));
+    }
 ```
 
-还有一个小知识点。魔数
+结果
 
-```java
-private static final int HASH_INCREMENT = 0x61c88647;
+```console
+pool-1-thread-1:locallocal--初始化
+pool-1-thread-1:transLocaltransLocal--初始化
+pool-1-thread-1:locallocal--初始化
+pool-1-thread-1:transLocaltransLocal--修改
 ```
 
-是为了离散队列使得分布更加均匀具体看[参考1](https://zhuanlan.zhihu.com/p/40515974)
+[下一章](TheadLocal-3.md)讨论一下`TransmittableThreadLocal`这个包的源码
 
-解决hash冲突的方式
-
-1. 开放定址法
-   *  就是ThreadLocalMap 采用的方案，适合总条数不多，hash 冲突不大的时候使用，而且上面采用的是定量增长的方式，找到一个null的位置，存入当然里面还包括其他情况替换下推等处理方式具体看上面源码
-2. 链地址法
-   *  这个就是hashmap使用的方式，hash冲突就放入链表当中
-3. 再哈希法
-   *  找到下一个hash方法再计算，直到不冲突
-4. 建立公共溢出区
-   * 就是把冲突的都放在另一个地方，不在表里面
-
-现在看get方法
-
-```java
-        private Entry getEntry(ThreadLocal<?> key) {
-            int i = key.threadLocalHashCode & (table.length - 1);
-            Entry e = table[i];
-          //不为空且key一致就返回
-            if (e != null && e.get() == key)
-                return e;
-            else
-                return getEntryAfterMiss(key, i, e);
-        }
-```
-
-getEntryAfterMiss方法
-
-```java
-        private Entry getEntryAfterMiss(ThreadLocal<?> key, int i, Entry e) {
-            Entry[] tab = table;
-            int len = tab.length;
-						//比较拿到下一个位置++
-            while (e != null) {
-                ThreadLocal<?> k = e.get();
-                if (k == key)
-                    return e;
-                if (k == null)
-                  //剔除空的key
-                    expungeStaleEntry(i);
-                else
-                    i = nextIndex(i, len);
-                e = tab[i];
-            }
-            return null;
-        }
-```
-
----
-
-参考：
-
-1、[从 ThreadLocal 的实现看散列算法](https://zhuanlan.zhihu.com/p/40515974)
-
-2、[解决Hash冲突四种方法](https://blog.csdn.net/yeiweilan/article/details/73412438)

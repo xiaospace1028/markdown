@@ -1,4 +1,4 @@
-## TheadLocal（一）
+## TheadLocal
 
 问题：
 
@@ -227,6 +227,7 @@ private static final int HASH_INCREMENT = 0x61c88647;
             if (e != null && e.get() == key)
                 return e;
             else
+              //找到下标一致但是key缺不一致的数据
                 return getEntryAfterMiss(key, i, e);
         }
 ```
@@ -252,6 +253,8 @@ getEntryAfterMiss方法
             return null;
         }
 ```
+
+这章讨论了线程中参数可见，[下一章](TheadLocal-2.md) 讨论一下父线程变量子线程的可见性 
 
 ---
 

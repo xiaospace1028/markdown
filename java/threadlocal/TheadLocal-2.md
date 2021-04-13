@@ -55,7 +55,7 @@ Thread#init 方法里面
     }
 ```
 
-所以他只是在创建线程的时候拷贝父线程的`inheritableThreadLocals`并没有一个跟随的检测的机制，可以适合TraceId，但是如果有需求想要创建有主线程变更后会更新的功能，需要使用阿里巴巴开源的jar包[TransmittableThreadLocal](https://github.com/alibaba/transmittable-thread-local) 里面有三种使用方式，agent，修饰线程池，修饰Thread*的方式使用方法以及对比效果
+所以他只是在创建线程的时候拷贝父线程的`inheritableThreadLocals`并没有一个跟随的检测的机制，可以适合TraceId，但是如果有需求想要创建有主线程变更后会更新的功能，需要使用阿里巴巴开源的jar包[TransmittableThreadLocal](https://github.com/alibaba/transmittable-thread-local) 里面有三种使用方式，agent，修饰线程池，修饰Thread的方式使用方法以及对比效果
 
 ```java
     public static void main(String[] args) throws InterruptedException {

@@ -100,7 +100,7 @@ queue_place --> |无| non_core_place{非核心线程是否有位置}
 non_core_place --> |有| non_core[非核心线程]
 non_core_place --> |无| policy[拒绝策略]
 ```
-
+尝试另外一种风格的流程图
 ```flow
 st=>start: 任务
 core_place=>condition: 核心线程是否有位置

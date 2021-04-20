@@ -91,7 +91,7 @@ ThreadPoolExecutor有7个核心参数
 流程图
 
 ```mermaid
-graph TD
+graph LR
 Task[任务] --> core_place{核心线程是否有位置}
 core_place -->|有| core[核心线程]
 core_place -->|无| queue_place{队列是否有位置}
@@ -100,6 +100,27 @@ queue_place --> |无| non_core_place{非核心线程是否有位置}
 non_core_place --> |有| non_core[非核心线程]
 non_core_place --> |无| policy[拒绝策略]
 ```
+
+```flow
+st=>start: 任务
+core_place=>condition: 核心线程是否有位置
+queue_place=>condition: 队列是否有位置
+non_core_place=>condition: 非核心线程是否有位置
+core=>operation: 核心线程
+queue=>operation: 队列
+non_core=>operation: 非核心线程
+policy=>operation: 拒绝策略
+st->core_place
+core_place(yes)->core
+core_place(no)->queue_place
+queue_place(yes)->queue
+queue_place(no)->non_core_place
+non_core_place(yes)->non_core
+non_core_place(no)->policy
+
+```
+
+
 
 讲一下代码层面验证和源码层面
 

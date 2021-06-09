@@ -31,7 +31,7 @@ String s = local.get();
 基础知识
 
 ```java
-int h = k.threadLocalHashCode & (len - 1); //位运算 快速取下标 类似于 5%2 =2
+int h = k.threadLocalHashCode & (len - 1); //位运算 快速取下标 类似于 5%2 =2 
 private static final int INITIAL_CAPACITY = 16;
 ```
 

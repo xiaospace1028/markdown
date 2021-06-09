@@ -363,21 +363,19 @@ public class DefaultAopProxyFactory implements AopProxyFactory, Serializable {
 
 
 ```java
-   List methods = CollectionUtils.transform(actualMethods, new Transformer() {
-            public Object transform(Object value) {
-                Method method = (Method)value;
-                int modifiers = Constants.ACC_FINAL
-                    | (method.getModifiers()
-                       & ~Constants.ACC_ABSTRACT
-                       & ~Constants.ACC_NATIVE
-                       & ~Constants.ACC_SYNCHRONIZED);
-                if (forcePublic.contains(MethodWrapper.create(method))) {
-                    modifiers = (modifiers & ~Constants.ACC_PROTECTED) | Constants.ACC_PUBLIC;
-                }
-			// 对获取到的方法是有标记值	
-                return ReflectUtils.getMethodInfo(method, modifiers);
-            }
-        });
+public boolean evaluate(Object arg) {
+        Member member = (Member)arg;
+        int mod = member.getModifiers();
+        if (Modifier.isPrivate(mod)) {//私有方法去除
+            return false;
+        } else if (Modifier.isPublic(mod)) {//共有方法
+            return true;
+        } else if (Modifier.isProtected(mod) && this.protectedOk) {//protected修饰 并且是外面传入true的情况
+            return true;
+        } else {
+            return this.samePackageOk && this.pkg.equals(TypeUtils.getPackageName(Type.getType(member.getDeclaringClass())));//是否过期的
+        }
+    }
 ```
 
 主要是VisibilityPredicate  进行处理了 **private**

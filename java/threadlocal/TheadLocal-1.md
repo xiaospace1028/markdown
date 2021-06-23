@@ -1,6 +1,4 @@
-## 
-
-
+##  ThreadLocal
 
 问题：
 

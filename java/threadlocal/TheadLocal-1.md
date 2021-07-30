@@ -254,7 +254,9 @@ getEntryAfterMiss方法
         }
 ```
 
-这章讨论了线程中参数可见，[下一章](TheadLocal-2.md) 讨论一下父线程变量子线程的可见性 
+这章讨论了线程中参数可见，[下一章](TheadLocal-2.md) 讨论一下父线程变量子线程的可见性 ；
+
+所以ThreadLocal除了remove方法，还存在expungeStaleEntry清除空值的办法，也就是内存泄漏方法；
 
 ---
 

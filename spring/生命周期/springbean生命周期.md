@@ -2,12 +2,13 @@
 
 ### 生命周期
 
-1. 初始化装配属性 
-2. 执行相关aware 
-3. 执行BeanPostProcessor.Before方法 
-4. 执行init方法
-5. 执行BeanPostProcessor.After方法 
-6. 执行destroy方法
+1. 实例化
+2. 装配属性 
+3. 执行相关aware 
+4. 执行BeanPostProcessor.Before方法 
+5. 执行init方法
+6. 执行BeanPostProcessor.After方法 
+7. 执行destroy方法
 
 ---
 

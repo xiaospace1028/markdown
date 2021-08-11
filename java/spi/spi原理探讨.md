@@ -1,4 +1,4 @@
-./面试问到这个，没有看过，现在分析一下
+p面试问到这个，没有看过，现在分析一下
 
 spi 全称为 Service Provider Interface，是一种服务发现机制。它通过在ClassPath路径下的META-INF/services文件夹查找文件，自动加载文件里所定义的类。 
 

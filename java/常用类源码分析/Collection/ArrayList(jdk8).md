@@ -1,5 +1,6 @@
-```java
+先扩容再添加数据的
 
+```java
 package java.util;
 
 import java.util.function.Consumer;

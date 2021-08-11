@@ -43,10 +43,11 @@ public class BeanConfig {
         return new BeanInit();
     }
 
-    /**
+     /**
      * ==>BeanNameAware.setBeanName
      * ==>BeanClassLoaderAware.setBeanClassLoader
      * ==>BeanFactoryAware.setBeanFactory
+     * ==>ResourceLoaderAware.setResourceLoader
      * ==>ApplicationEventPublisherAware.setApplicationEventPublisher
      * ==>MessageSourceAware.setMessageSource
      * ==>ApplicationContextAware.setApplicationContext
@@ -377,4 +378,6 @@ result = {CopyOnWriteArrayList@8660}  size = 17
  15 = {AutowiredAnnotationBeanPostProcessor@8780} 
  16 = {ApplicationListenerDetector@8781} 
 ```
+
+![spring生命周期](../../image/spring生命周期.png)
 
